@@ -1,0 +1,47 @@
+name: CI / CD
+
+on:
+  # triggers the workflow on push to main
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write # required to allow GitHub to assume an AWS IAM role
+  contents: write # required for actions/checkout and in order to merge commits to a branch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+      - run: npm ci
+      - run: npm run build
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist
+
+  deploy-UAT:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: UAT
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist
+      - run: ls -la dist
+  deploy-prod:
+    needs: deploy-UAT
+    runs-on: ubuntu-latest
+    environment: Production
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: dist
+          path: dist
+      - run: ls -la dist
